@@ -1,4 +1,4 @@
-# G-S-3_11
+# G&S Example 3.11
 Chapter 3 of G&amp;S, Example 3.11 binomial distribution simulation
 
 H_o: p=.6
