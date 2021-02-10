@@ -1,0 +1,81 @@
+---
+title: "G&S Ch3, example 3.11 simulation"
+author: "Bruce Mallory"
+date: "2/9/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+On page 2 is the recreated graph from Example 3.11.  
+
+I've used n = the number of subjects (100).  
+And k = the number of subjects who reported a difference with the improved medicine.
+And thus, p = k/n.
+
+The red curve is a power curve for when m=68.  I found this value of m by coding a loop (for k = 1 to 100) that compared the binomial cdfs for k=1 unti k=100.  I'm using p_null (p=.06) here because I'm looking for the Type I error (false positives - so I'm using the "positive", or p_null and looking for the right tail.)  In this loop when (1 - the binomial cdf) got smaller than 0.05 I broke the loop and stored k into m1.  And m1 was 68.
+
+The blue curve is a power curve for when m=73.  I found this value of m by coding a loop (for k = 1 to 100) that compared the binomial cdfs for k=1 until k=100.  I'm using the largest p_alt (p=.08) here because I'm looking for the Type II error (false negatives - so I'm using the "negative", or p_alt and looking for the left tail.)  In this loop when the binomial cdf got smaller than 0.05 I broke the loop and stored k into m2.  And m2 was 73.
+
+Though not labeled in the book, the x-axis is showing the alternative probilities (p_alt) which we are testing against.  And for this example, the authors are looking at the range from a alternative hypothesis of p=.06 up to the alternative hypothesis of p=.08.  These are the left and right sides of the grey rectangle on the graph.
+
+The y-axis is showing the power, which is 1-$\beta$ (where $\beta$ is the Type II error).  The top side of the grey box is showing where the power = 0.95 (and where the Type II error = 0.05).  For the blue graph (m=73), the intersection with the top of the rectangle is showing where the power of the test is 0.95 against an alternative hypothesis of p_alt=0.8.  We could find where the m=68 power curve reaches a 0.95 power against p_alt=?, by finding the intersection between the red curve and the top side of the grey box.  (p_alt=?, 0.95)
+
+The lower side of the rectangle is showing the minimum acceptable alpha level (Type I error) for each curve.  BUT since Type I error is false positive, we're looking for when p_null is true (here it's p=.6).  So there is no "against an alternative result" when calculating Type I error.  Type I error is calculated against the null hypothesis, and the actual alternative is irrelevant.  Thus where the blue curve crosses the lower side of the grey rectangle is meaningless.
+
+```{r}
+library(ggplot2)
+
+# null hypothesis is that p = 0.6
+p_null <- 0.6
+
+# n is the number of subjects given headache medicine
+n <- 100
+
+# Find the m that will get the Type I error under .05
+# The right tail when p_alt=p_null
+for (i in 1:100) {
+  p_value <- 1 - pbinom(i, size=n, prob=p_null)
+  if (p_value < 0.05) break
+}
+m1 <- i
+
+# Find the m that will get the Type II error under .05
+# The left tail when p_alt=p_null
+for (i in 1:100) {
+  p_value <- pbinom(i, size=n, prob=.8)
+  if (p_value > 0.05) break
+}
+m2 <- (i)
+ 
+df <- data.frame("p_alt"=seq(0.4, 1.0, .001), "pwr1"=rep(0,601), "pwr2"=rep(0,601))
+
+for (i in 1:601) {
+  df$pwr1[i] <- pnorm(m1/n, df$p_alt[i], sqrt(df$p_alt[i]*(1-df$p_alt[i])/n), lower.tail = FALSE)
+  df$pwr2[i] <- pnorm(m2/n, df$p_alt[i], sqrt(df$p_alt[i]*(1-df$p_alt[i])/n), lower.tail = FALSE)
+}
+
+box <- data.frame(x1=.6, x2=.8, y1=.05, y2=.95)
+
+ggplot(df, aes(x = p_alt))+
+  geom_path(aes(y = pwr1, colour = "69"), col="red") +
+  geom_path(aes(y = pwr2, colour = "73"), col="blue") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  xlab("") + scale_x_continuous(n.breaks=10) +
+  ylab("") + scale_y_continuous(n.breaks=10) +
+  geom_segment(aes(x = x1, y = y1, xend = x2, yend = y1, 
+                   colour = "segment"), col="grey", data = box) +
+  geom_segment(aes(x = x2, y = y1, xend = x2, yend = y2, 
+                   colour = "segment"), col="grey", data = box) +
+  geom_segment(aes(x = x2, y = y2, xend = x1, yend = y2, 
+                   colour = "segment"), col="grey", data = box) +
+  geom_segment(aes(x = x1, y = y2, xend = x1, yend = y1, 
+                   colour = "segment"), col="grey", data = box)
+  
+```
+  
